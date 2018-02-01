@@ -23,6 +23,6 @@ if __name__ == '__main__':
             tax  = 0 
         print(format(tax,".2f"))
     except Exception as ex:
-        print("Parameter Error")    
+        print("Parameter Error")     
 
       
