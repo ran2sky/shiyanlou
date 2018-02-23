@@ -1,5 +1,19 @@
-import sys
+"""
+解析参数
+先读取配置文件
 
+读取员工数据（进程）
+计算员工数据（进程）
+写入员工数据（进程）
+"""
+
+
+
+
+
+
+import sys
+from multiprocessing import Queue, Process
 
 class Args:
     def __init__(self, args):
@@ -40,11 +54,11 @@ class SheBaoConfig:
                else:
                    rate += float(value.strip())
        return jishu_low, jishu_high, rate
-class EmployeeData:
-    def __init__(self, file):
-        self.data = self.__parse_file(file)
-
-    def __parse_file(self, file):
+class EmployeeData(Process):
+    def __init__(self, file, queue):
+        self.file = file
+        self.queue = queue
+    def __parse(self):
         data = []
         for line in open(file):
             key, value = line.split(',')
@@ -53,7 +67,12 @@ class EmployeeData:
     def __iter__(self):
         return iter(self.data)
 
-class Calculator:
+    def run(self)
+        for item in self.__parse():
+        self.queue.put(data)
+
+
+class Calculator(Process):
     tax_start = 3500
     tax_table = [
         (80000, 0.45, 13505),
@@ -64,8 +83,10 @@ class Calculator:
         (1500, 0.1, 105),
         (0, 0.03, 0),
     ]
-    def __init__(self, config):
+    def __init__(self, config, input_queue, output_queue):
         self.config = config
+        self.input_q = input_queue
+        self.output_q = output_queue
     def calculate(self, data_item):
         employee_id, gongzi = data_item
 
@@ -90,31 +111,40 @@ class Calculator:
                     tax_left_gongzi = left_gongzi - tax
                     break
         return str(employee_id), str(gongzi), '{:.2f}'.format(shebao), '{:.2f}'.format(tax), '{:.2f}'.format(tax_left_gongzi)
-class Exporter:
-    def __init__(self, file):
-        self.file = file
+
+
+    def run(self):
+        item = self.queue.get()
+        result = self.calculate(item)
+        self.output_q.put(result)
+class Exporter(Process):
+    def __init__(self, file, queue):
+        self.file = open(file, 'w')
+        self.input_q = queue
     def export(self, data):
         with open(self.file, 'w') as f:
             for item in data:
                 line = (','.join(item)) + '\n'
                 f.write(line)
-class Executor:
-    def __init__(self):
-
-        args = Args(sys.argv[1:])
-        config = SheBaoConfig(args.get_arg_value('-c'))
-        self.employee_data = EmployeeData(args.get_arg_value('-d'))
-        self.exporter = Exporter(args.get_arg_value('-o'))
-        self.calculator = Calculator(config)
-
-    def execute(self):
-        results = []
-        for item in self.employee_data:
-            result = self.calculator.calculate(item)
-            results.append(result)
-        self.exporter.export(results)
-
+    def run(self):
+        item = self.input_q.get()
+        line = ','.join(item) + '\n'
+        self.file.write(line)
 if __name__ == '__main__':
-    executor = Executor()
-    executor.execute()
+    args = Args(sys.argv[1:])
+    config = SheBaoConfig(args.get_arg_value('-c'))
+    q1 = Queue()
+    q2 = Queue()
+    employye_data = EmployeeData(args.get_arg_value('-d'))
+    exporter = Exporter(args.get_arg_value('-o'))
+    calculator = Calculator(config)
+
+    employee_data.start()
+    calculator.start()
+    exporter.start()
+
+    employee_data.join()
+    calculator.join()
+    exporter.join()
+
 
